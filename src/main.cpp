@@ -48,11 +48,18 @@ void setCustomImGuiTheme()
 int main()
 {
     using namespace std;
+    srand((unsigned int)time(0));
 
     const unsigned int WINDOW_WIDTH = 1600;
     const unsigned int WINDOW_HEIGHT = 900;
+
     sf::RenderWindow window(sf::VideoMode({WINDOW_WIDTH, WINDOW_HEIGHT}), "GravitySim", sf::Style::Default, sf::State::Windowed, sf::ContextSettings{.antiAliasingLevel = 8});
-    window.setVerticalSyncEnabled(true);
+
+    int FPS_LIMIT = 0; // Limite FPS (0 = illimité)
+    bool isVSyncEnabled = false;
+    FPS_LIMIT > 0 ? window.setFramerateLimit(FPS_LIMIT) : window.setFramerateLimit(0);
+
+    rand();
 
     //=======IMGUI CONFIG========
     if (!ImGui::SFML::Init(window))
@@ -65,31 +72,32 @@ int main()
 
     io.FontDefault = fontRoboto;
     setCustomImGuiTheme();
-
     //===========================
     sf::Clock clock;
-    sf::Font font("assets/arial.ttf");
-
-    int timeScale = 1;
-    sf::Text timeScaleText(font);
+    float timeScale = 1.f;
+    bool isSimRunning = false;
+    bool showFPS = true;
+    bool showMainPanel = true;
+    bool showSettings = false;
 
     // View
     CameraView view({WINDOW_WIDTH, WINDOW_HEIGHT}, {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2});
     bool toggleFocus = false;
+    int followObjectIndex = -1;
     float followSpeed = 0.5f;
 
-    // Ajout objets
+    // Propriétés des objets
+    int selectedObjectIndex = -1;
     vector<Object> objects;
-    int objNum = 3;
+    int objNum = 0;
 
-    objects.push_back(Object({100, 100}, {10, 10}, 1000, sf::Color(189, 166, 212, 255)));
-    objects.push_back(Object({1500, 800}, {-10, -5}, 1000, sf::Color(0, 166, 212, 255)));
-
-    // Boucle
+    // Boucle principale
     while (window.isOpen())
     {
-        float dt = clock.restart().asSeconds() * timeScale; // dt en s depuis la derniere frame
+        float delta_time = clock.restart().asSeconds();
+        float dt = delta_time * timeScale; // dt en s depuis la derniere frame
 
+        // Gestion des événements
         while (const std::optional event = window.pollEvent())
         {
             ImGui::SFML::ProcessEvent(window, *event);
@@ -99,66 +107,232 @@ int main()
                 window.close();
             else if (const auto *keyPressed = event->getIf<sf::Event::KeyPressed>())
             {
-
-                // Gestion Time Scale
-                if (keyPressed->scancode == sf::Keyboard::Scancode::Right)
-                    timeScale++;
-                if (keyPressed->scancode == sf::Keyboard::Scancode::Left)
-                    timeScale--;
-                if (keyPressed->scancode == sf::Keyboard::Scancode::Left)
-                    timeScale--;
-
-                if (keyPressed->scancode == sf::Keyboard::Scancode::F)
-                {
-                    toggleFocus = !toggleFocus;
-                    cout << toggleFocus << endl;
-                }
-
-                if (keyPressed->scancode == sf::Keyboard::Scancode::R)
-                    window.setView(window.getDefaultView());
             }
             else if (const auto *scroll = event->getIf<sf::Event::MouseWheelScrolled>())
             {
                 float factor = (scroll->delta > 0) ? 0.9f : 1.1f;
                 view.zoomAtPointer(window, factor);
             }
-
-            if (toggleFocus)
-            {
-                sf::Vector2f target = objects[0].getPosition();
-                sf::Vector2f current = view.getCenter();
-                view.focusOn(current + (target - current) * followSpeed);
-            }
         }
-        ImGui::SFML::Update(window, clock.restart());
 
-        ImGui::Begin("Simulateur gravitationnel");
-        ImGui::Text("FPS: %1.f", 1 / dt);
-        if (ImGui::Button("Look at this pretty button"))
-            objects.push_back(Object({500, 500}, {0, 0}, 1000, sf::Color(0, 166, 212, 255)));
-
-        static float f = 0.0f;
-        ImGui::SliderFloat("slider", &f, 0, 1);
-        if (ImGui::Button("Focus view"))
+        /*if (toggleFocus)
         {
             sf::Vector2f target = objects[0].getPosition();
             sf::Vector2f current = view.getCenter();
             view.focusOn(current + (target - current) * followSpeed);
-            toggleFocus = !toggleFocus;
         }
-        ImGui::ProgressBar(f);
-        ImGui::End();
+        else
+            selectedObjectIndex = -1;*/
 
-        gravityForce(objects);
-        for (auto &astre : objects)
+        ImGui::SFML::Update(window, clock.restart());
+
+        //=======TASKBAR========
+        ImGui::BeginMainMenuBar();
+        ImGui::Button(showMainPanel ? "Close Menu" : "Open Menu") ? showMainPanel = !showMainPanel : 0;
+        ImGui::Button(showSettings ? "Close Settings" : "Settings") ? showSettings = !showSettings : 0;
+        if (ImGui::Button("Reset View"))
         {
-            astre.update_physics(dt);
+            view = CameraView({WINDOW_WIDTH, WINDOW_HEIGHT}, {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2});
+            toggleFocus = false;
+            followObjectIndex = -1;
         }
 
-        timeScaleText.setString(sf::String(L"Échelle: x") + to_string(timeScale));
+        ImGui::Text("Pointer: (%.1f, %.1f)", view.getMouseWorldPos(window).x, view.getMouseWorldPos(window).y);
+        ImGui::SameLine(ImGui::GetWindowWidth() - 100); // ou -80 selon la longueur du texte
+
+        // Récupérer les FPS :
+        if (showFPS)
+            ImGui::Text("FPS: %.1f", 1.f / delta_time);
+        ImGui::EndMainMenuBar();
+
+        if (showMainPanel)
+        {
+            ImGui::Begin("GravitySim - Simulation Controls");
+            //=======GENERAL UI========
+            ImGui::BeginGroup();
+            ImGui::Button(isSimRunning ? "Pause" : "Play") ? isSimRunning = !isSimRunning : 0;
+
+            ImGui::SameLine(0, 20);
+            if (ImGui::Button("Reset Simulation"))
+            {
+                for (auto &obj : objects)
+                    obj.reset();
+                selectedObjectIndex = -1;
+                followObjectIndex = -1;
+                toggleFocus = false;
+            }
+            ImGui::SameLine(0, 20);
+
+            ImGui::SetNextItemWidth(150.0f);
+            ImGui::SliderFloat("Time Scale", &timeScale, .1f, 20.0f, "%.1f");
+            ImGui::EndGroup();
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            //=======Objects UI========
+            ImGui::BeginGroup();
+            ImGui::BeginGroup();
+            if (ImGui::BeginListBox("##Objects", ImVec2(150, 250)))
+            {
+                for (int i = 0; i < objects.size(); ++i)
+                {
+                    if (ImGui::Selectable(objects[i].getLabel().c_str(), false))
+                    {
+                        selectedObjectIndex = i;
+                    }
+                }
+                ImGui::EndListBox();
+            }
+            if (ImGui::Button("Add Object"))
+            {
+                objNum++;
+                objects.push_back(Object({float(rand() % WINDOW_WIDTH), float(rand() % WINDOW_HEIGHT)},
+                                         {float((rand() % 200) - 100) / 10.f, float((rand() % 200) - 100) / 10.f},
+                                         float((rand() % 900) + 1000),
+                                         sf::Color(rand() % 256, rand() % 256, rand() % 256, 255),
+                                         "Astre " + to_string(objNum)));
+            }
+            ImGui::EndGroup();
+            ImGui::SameLine(0, 20);
+            //=======Object Properties UI========
+            ImGui::BeginChild("Object Properties", ImVec2(300, 0), true);
+            if (selectedObjectIndex != -1 && selectedObjectIndex < objects.size())
+            {
+                Object &selectedObject = objects[selectedObjectIndex];
+
+                ImGui::Text("Properties of %s", selectedObject.getLabel().c_str());
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                string label = selectedObject.getLabel();
+                char buf[64];
+                strncpy(buf, label.c_str(), sizeof(buf));
+                if (ImGui::InputText("Label", buf, sizeof(buf)))
+                {
+                    selectedObject.setLabel(string(buf));
+                }
+
+                float radius = selectedObject.getRadius();
+                if (ImGui::InputFloat("Radius", &radius, 1.f, 100.f))
+                {
+                    radius > 1.f ? selectedObject.setRadius(radius) : selectedObject.setRadius(1.f);
+                }
+
+                sf::Color color = selectedObject.getColor();
+                float colorArr[3] = {color.r / 255.f, color.g / 255.f, color.b / 255.f};
+                if (ImGui::ColorEdit3("Color", colorArr))
+                {
+                    selectedObject.setColor(sf::Color(colorArr[0] * 255, colorArr[1] * 255, colorArr[2] * 255));
+                }
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                sf::Vector2f position = selectedObject.getPosition();
+                if (ImGui::InputFloat("Position X", &position.x))
+                {
+                    selectedObject.setPosition(position);
+                }
+                if (ImGui::InputFloat("Position Y", &position.y))
+                {
+                    selectedObject.setPosition(position);
+                }
+
+                ImGui::Spacing();
+
+                float mass = selectedObject.getMass();
+                if (ImGui::InputFloat("Mass", &mass, 1.f, 1000000.f))
+                {
+                    mass > 0.f ? selectedObject.setMass(mass) : selectedObject.setMass(1.f);
+                }
+
+                ImGui::Spacing();
+
+                ImGui::Checkbox("Show Trajectory", &selectedObject.showTrajectory);
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImGui::Text("Initials parameters :");
+                ImGui::Spacing();
+
+                sf::Vector2f initPos = selectedObject.getInitialPosition();
+                if (ImGui::InputFloat("Position X", &initPos.x))
+                {
+                    selectedObject.setInitialPosition(initPos);
+                }
+                if (ImGui::InputFloat("Position Y", &initPos.y))
+                {
+                    selectedObject.setInitialPosition(initPos);
+                }
+                ImGui::Spacing();
+                sf::Vector2f initVel = selectedObject.getInitialVelocity();
+                if (ImGui::InputFloat("Velocity X", &initVel.x))
+                {
+                    selectedObject.setInitialVelocity(initVel);
+                }
+                else if (ImGui::InputFloat("Velocity Y", &initVel.y))
+                {
+                    selectedObject.setInitialVelocity(initVel);
+                }
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                if (ImGui::Button("Reset Object"))
+                {
+                    selectedObject.reset();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Delete Object"))
+                {
+                    objects.erase(objects.begin() + selectedObjectIndex);
+                    selectedObjectIndex = -1;
+                }
+
+                /*bool isObjectFollowed = (followObjectIndex == selectedObjectIndex && toggleFocus);
+                if (ImGui::Checkbox("Follow Object", &isObjectFollowed))
+                {
+                    view.focusOn(selectedObject.getPosition());
+                }*/
+            }
+            else
+                ImGui::Text("Select or add an object.");
+            ImGui::EndChild();
+            ImGui::EndGroup();
+
+            ImGui::End();
+        }
+
+        if (showSettings)
+        {
+            ImGui::Begin("GravitySim - Settings");
+            ImGui::Checkbox("Show FPS", &showFPS);
+            if (ImGui::SliderInt("Limite FPS", &FPS_LIMIT, 1, 240, FPS_LIMIT == 0 ? "Illimité" : isVSyncEnabled ? "V-Sync enabled"
+                                                                                                                : "%d"))
+                window.setFramerateLimit(FPS_LIMIT);
+            if (ImGui::Checkbox("V-Sync", &isVSyncEnabled))
+                window.setVerticalSyncEnabled(isVSyncEnabled);
+            ImGui::End();
+        }
+
+        if (isSimRunning)
+        {
+            applyGravityForce(objects);
+            for (auto &astre : objects)
+            {
+                astre.update_physics(dt);
+            }
+        }
+
         window.clear();
 
-        view.applyTo(window);
         view.applyTo(window);
 
         for (auto &obj : objects)
@@ -168,8 +342,6 @@ int main()
 
         window.setView(window.getDefaultView());
         // Elements qui ne sont pas affecter par la vue
-
-        window.draw(timeScaleText);
 
         ImGui::SFML::Render(window);
         window.display();

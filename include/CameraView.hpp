@@ -3,8 +3,8 @@
 
 class CameraView
 {
-
-    float zoomFactor;
+private:
+    float zoomFactor = 1.0f;
 
     bool toggleFocus = false;
 
@@ -14,43 +14,20 @@ class CameraView
     sf::View v;
 
 public:
-    CameraView(sf::Vector2f size, sf::Vector2f centerPos = {0, 0}) : v(centerPos, size) {}
+    CameraView(sf::Vector2f size, sf::Vector2f centerPos = {0, 0});
 
-    void zoom(float factor)
-    {
-        zoomFactor *= factor;
-        v.zoom(factor);
-    }
+    void zoom(float factor);
 
-    void zoomIn() { zoom(0.9f); }  // Zoom avant
-    void zoomOut() { zoom(1.1f); } // Zoom arrière
+    void zoomIn();  // Zoom avant
+    void zoomOut(); // Zoom arrière
 
-    void zoomAtPointer(sf::RenderWindow &window, float factor)
-    {
-        sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
+    void zoomAtPointer(sf::RenderWindow &window, float factor);
 
-        sf::Vector2f beforeZoom = window.mapPixelToCoords(mousePixel, v);
+    void focusOn(const sf::Vector2f &center);
 
-        zoomFactor *= factor;
-        v.zoom(factor);
+    sf::Vector2f getCenter() const;
 
-        sf::Vector2f afterZoom = window.mapPixelToCoords(mousePixel, v);
+    void applyTo(sf::RenderWindow &window);
 
-        v.move(beforeZoom - afterZoom);
-    }
-
-    void focusOn(const sf::Vector2f &center)
-    {
-        v.setCenter(center);
-    }
-
-    sf::Vector2f getCenter()
-    {
-        return v.getCenter();
-    }
-
-    void applyTo(sf::RenderWindow &window)
-    {
-        window.setView(v);
-    }
+    sf::Vector2f getMouseWorldPos(const sf::RenderWindow &window);
 };

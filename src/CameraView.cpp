@@ -1,55 +1,55 @@
 #include <SFML/Graphics.hpp>
+#include "CameraView.hpp"
 
-class CameraView
+CameraView::CameraView(sf::Vector2f size, sf::Vector2f centerPos)
 {
+    this->size = size;
+    this->centerPos = centerPos;
 
-    float zoomFactor;
+    v.setCenter(centerPos);
+    v.setSize(size);
+}
 
-    bool toggleFocus = false;
+void CameraView::zoom(float factor)
+{
+    zoomFactor *= factor;
+    v.zoom(factor);
+}
 
-    sf::Vector2f size;
-    sf::Vector2f centerPos;
+void CameraView::zoomIn() { zoom(0.9f); }  // Zoom avant
+void CameraView::zoomOut() { zoom(1.1f); } // Zoom arrière
 
-    sf::View v;
+void CameraView::zoomAtPointer(sf::RenderWindow &window, float factor)
+{
+    sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
 
-public:
-    CameraView(sf::Vector2f size, sf::Vector2f centerPos = {0, 0}) : v(centerPos, size) {}
+    sf::Vector2f beforeZoom = window.mapPixelToCoords(mousePixel, v);
 
-    void zoom(float factor)
-    {
-        zoomFactor *= factor;
-        v.zoom(factor);
-    }
+    zoomFactor *= factor;
+    v.zoom(factor);
 
-    void zoomIn() { zoom(0.9f); }  // Zoom avant
-    void zoomOut() { zoom(1.1f); } // Zoom arrière
+    sf::Vector2f afterZoom = window.mapPixelToCoords(mousePixel, v);
 
-    void zoomAtPointer(sf::RenderWindow &window, float factor)
-    {
-        sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
+    v.move(beforeZoom - afterZoom);
+}
 
-        sf::Vector2f beforeZoom = window.mapPixelToCoords(mousePixel, v);
+void CameraView::focusOn(const sf::Vector2f &center)
+{
+    v.setCenter(center);
+}
 
-        zoomFactor *= factor;
-        v.zoom(factor);
+sf::Vector2f CameraView::getCenter() const
+{
+    return v.getCenter();
+}
 
-        sf::Vector2f afterZoom = window.mapPixelToCoords(mousePixel, v);
+void CameraView::applyTo(sf::RenderWindow &window)
+{
+    window.setView(v);
+}
 
-        v.move(beforeZoom - afterZoom);
-    }
-
-    void focusOn(const sf::Vector2f &center)
-    {
-        v.setCenter(center);
-    }
-
-    sf::Vector2f getCenter()
-    {
-        return v.getCenter();
-    }
-
-    void applyTo(sf::RenderWindow &window)
-    {
-        window.setView(v);
-    }
-};
+sf::Vector2f CameraView::getMouseWorldPos(const sf::RenderWindow &window)
+{
+    sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
+    return window.mapPixelToCoords(mousePixel, v);
+}
