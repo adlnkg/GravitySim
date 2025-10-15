@@ -1,4 +1,3 @@
-#include <SFML/Graphics.hpp>
 #include "CameraView.hpp"
 
 CameraView::CameraView(sf::Vector2f size, sf::Vector2f centerPos)

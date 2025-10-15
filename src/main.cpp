@@ -3,6 +3,11 @@
 #include <imgui.h>
 #include "CameraView.hpp"
 #include "Object.hpp"
+#include "SaveManager.hpp"
+using namespace std;
+
+#define WINDOW_WIDTH 1600
+#define WINDOW_HEIGHT 900
 
 void setCustomImGuiTheme()
 {
@@ -47,19 +52,13 @@ void setCustomImGuiTheme()
 
 int main()
 {
-    using namespace std;
     srand((unsigned int)time(0));
-
-    const unsigned int WINDOW_WIDTH = 1600;
-    const unsigned int WINDOW_HEIGHT = 900;
 
     sf::RenderWindow window(sf::VideoMode({WINDOW_WIDTH, WINDOW_HEIGHT}), "GravitySim", sf::Style::Default, sf::State::Windowed, sf::ContextSettings{.antiAliasingLevel = 8});
 
     int FPS_LIMIT = 0; // Limite FPS (0 = illimité)
     bool isVSyncEnabled = false;
     FPS_LIMIT > 0 ? window.setFramerateLimit(FPS_LIMIT) : window.setFramerateLimit(0);
-
-    rand();
 
     //=======IMGUI CONFIG========
     if (!ImGui::SFML::Init(window))
@@ -128,6 +127,7 @@ int main()
 
         //=======TASKBAR========
         ImGui::BeginMainMenuBar();
+        ImGui::Button("Save");
         ImGui::Button(showMainPanel ? "Close Menu" : "Open Menu") ? showMainPanel = !showMainPanel : 0;
         ImGui::Button(showSettings ? "Close Settings" : "Settings") ? showSettings = !showSettings : 0;
         if (ImGui::Button("Reset View"))
@@ -294,6 +294,10 @@ int main()
                 {
                     objects.erase(objects.begin() + selectedObjectIndex);
                     selectedObjectIndex = -1;
+                }
+                if (ImGui::Button("Serialize Object"))
+                {
+                    printJson(serializeObject(selectedObject));
                 }
 
                 /*bool isObjectFollowed = (followObjectIndex == selectedObjectIndex && toggleFocus);

@@ -37,6 +37,9 @@ FetchContent_Declare(ImGui-SFML
     SYSTEM)
 FetchContent_MakeAvailable(ImGui-SFML)
 
+FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
+FetchContent_MakeAvailable(json)
+
 # ====================
 #  Fichiers du projet
 # ====================
@@ -52,4 +55,4 @@ add_executable(gravitySim ${SOURCES})
 
 target_compile_features(gravitySim PRIVATE cxx_std_17)
 
-target_link_libraries(gravitySim PRIVATE SFML::Graphics ImGui-SFML::ImGui-SFML)
+target_link_libraries(gravitySim PRIVATE SFML::Graphics ImGui-SFML::ImGui-SFML nlohmann_json::nlohmann_json)

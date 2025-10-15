@@ -1,6 +1,4 @@
 #include "Object.hpp"
-#include <cmath>
-#include <algorithm>
 
 Object::Object(sf::Vector2f init_pos, sf::Vector2f init_vel, float mass,
                sf::Color color, std::string label, float radius)
