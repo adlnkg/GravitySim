@@ -127,7 +127,9 @@ int main()
 
         //=======TASKBAR========
         ImGui::BeginMainMenuBar();
-        ImGui::Button("Save");
+        if (ImGui::Button("Save"))
+        {
+        }
         ImGui::Button(showMainPanel ? "Close Menu" : "Open Menu") ? showMainPanel = !showMainPanel : 0;
         ImGui::Button(showSettings ? "Close Settings" : "Settings") ? showSettings = !showSettings : 0;
         if (ImGui::Button("Reset View"))
