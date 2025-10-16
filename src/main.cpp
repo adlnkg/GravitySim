@@ -129,6 +129,18 @@ int main()
         ImGui::BeginMainMenuBar();
         if (ImGui::Button("Save"))
         {
+            vector<json> jsonVec;
+            for (auto &obj : objects)
+            {
+                jsonVec.push_back(serializeObject(obj));
+            }
+
+            saveJson(jsonVec, "export.json", "addd");
+        }
+        if (ImGui::Button("Load"))
+        {
+            json data = loadJson("export.json");
+            deserializeObject(data);
         }
         ImGui::Button(showMainPanel ? "Close Menu" : "Open Menu") ? showMainPanel = !showMainPanel : 0;
         ImGui::Button(showSettings ? "Close Settings" : "Settings") ? showSettings = !showSettings : 0;
