@@ -22,4 +22,5 @@ struct FilePreview {
 };
 
 std::vector<FilePreview> getSaves(const std::string &directoryPath);
-void saveJson(const json &j, const std::string &name, const std::string &PATH);
+void saveJson(const json &j, const std::string &name, const std::string &PATH,
+              const std::string &description = "");

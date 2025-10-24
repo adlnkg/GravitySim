@@ -163,13 +163,14 @@ std::vector<FilePreview> getSaves(const std::string &directoryPath) {
   return filesData;
 }
 
-void saveJson(const json &j, const std::string &name,
+void saveJson(const json &j, const std::string &name, const std::string &path,
               const std::string &description) {
   json jfile;
   jfile["name"] = name;
   jfile["description"] = description;
   jfile["objects"] = j;
 
-  std::ofstream o(name);
-  o << std::setw(4) << jfile << std::endl;
+  std::ofstream file(path);
+  file << jfile.dump(4);
+  file.close();
 }

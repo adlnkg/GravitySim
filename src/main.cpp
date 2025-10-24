@@ -163,7 +163,7 @@ int main() {
       ImGui::Separator();
       ImGui::Spacing();
 
-      char save_name[64] = "SAVE_NAME";
+      static char save_name[64] = "";
       ImGui::InputText("Name", save_name, sizeof(save_name));
 
       if (ImGui::Button("Save")) {
@@ -172,7 +172,9 @@ int main() {
           jsonVec.push_back(serializeObject(obj));
         }
         try {
-          saveJson(jsonVec, save_name, "saves/");
+          saveJson(jsonVec, save_name,
+                   "saves/" + std::string(save_name) + ".json",
+                   "Saved on " + std::to_string(time(0)));
           ImGui::InsertNotification("Sauvegarde réussie ✅",
                                     ImGuiNotificationType_Success);
         } catch (const std::runtime_error &e) {
