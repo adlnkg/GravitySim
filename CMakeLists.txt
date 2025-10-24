@@ -48,6 +48,7 @@ file(GLOB_RECURSE SOURCES
 )
 
 file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}/bin)
+file(COPY ${CMAKE_SOURCE_DIR}/saves DESTINATION ${CMAKE_BINARY_DIR}/bin)
 
 include_directories(include)
 
